@@ -8,7 +8,6 @@ const readJsonFile = new Promise((resolve, reject) => {
     }
     try {
       const inputData = JSON.parse(data);
-      //console.log(inputData);
       resolve(inputData);
     } catch (err) {
       console.error("Error parsing json: ", err);
@@ -16,6 +15,8 @@ const readJsonFile = new Promise((resolve, reject) => {
     }
   });
 });
+
+// Sorts an array of data objects based on the startDate property in ascending order.
 
 function sortDataOnTime(data) {
   data.sort((d1, d2) => {
@@ -27,7 +28,9 @@ function sortDataOnTime(data) {
   return data;
 }
 
-function acumulateMonthly(data) {
+// Accumulates the monthly data by summing the amount for each month.
+
+function accumulateMonthly(data) {
   let dataMonthly = [];
   let sum = data[0]?.amount || 0;
   for (let i = 1; i < data.length; i++) {
@@ -50,22 +53,23 @@ function acumulateMonthly(data) {
   return dataMonthly;
 }
 
+// Generates the balance sheet based on the revenue and expenses data.
+
 function generateBalanceSheet() {
   readJsonFile.then((data) => {
     let revenue = data?.revenueData || [];
     let expenses = data?.expenseData || [];
 
-    //console.log(revenue);
     revenue = sortDataOnTime(revenue);
     expenses = sortDataOnTime(expenses);
-    //console.log(revenue);
 
-    let revenueMonthly = acumulateMonthly(revenue);
-    let expensesMonthly = acumulateMonthly(expenses);
+    let revenueMonthly = accumulateMonthly(revenue);
+    let expensesMonthly = accumulateMonthly(expenses);
     let balance = [];
     let left = 0;
     let right = 0;
 
+    // Iterate until both revenueMonthly and expensesMonthly are processed
     while (left < revenueMonthly.length || right < expensesMonthly.length) {
       const revenueDate =
         left < revenueMonthly.length ? revenueMonthly[left].startDate : null;
@@ -77,38 +81,25 @@ function generateBalanceSheet() {
       if (revenueDate === expensesDate) {
         balance.push({
           amount: revenueMonthly[left].amount - expensesMonthly[right].amount,
-          startDate: revenueMonthly[left].startDate,
+          startDate: revenueDate,
         });
         left++;
         right++;
       } else if (revenueDate < expensesDate || expensesDate === null) {
         balance.push({
           amount: revenueMonthly[left].amount,
-          startDate: revenueMonthly[left].startDate,
+          startDate: revenueDate,
         });
         left++;
       } else if (revenueDate > expensesDate || revenueDate === null) {
         balance.push({
           amount: -expensesMonthly[right].amount,
-          startDate: expensesMonthly[right].startDate,
+          startDate: expensesDate,
         });
         right++;
       }
     }
-    // while (left < revenueMonthly.length) {
-    //   balance.push({
-    //     amount: revenueMonthly[left].amount,
-    //     startDate: revenueMonthly[left].startDate,
-    //   });
-    //   left++;
-    // }
-    // while (right < expensesMonthly.length) {
-    //   balance.push({
-    //     amount: -expensesMonthly[right].amount,
-    //     startDate: expensesMonthly[right].startDate,
-    //   });
-    //   right++;
-    // }
+
     const startMonth = balance.length > 0 ? balance[0].startDate : null;
     const endMonth =
       balance.length > 0 ? balance[balance.length - 1].startDate : null;
@@ -134,13 +125,14 @@ function generateBalanceSheet() {
         currentDate.setMonth(currentDate.getMonth() + 1);
       }
 
-      const balanceSheet = {
-        balance: balance,
-      };
-
-      console.log(balanceSheet);
-      //console.log(JSON.stringify(balanceSheet));
+      balance = sortDataOnTime(balance);
     }
+
+    const balanceSheet = {
+      balance: balance,
+    };
+
+    console.log(JSON.stringify(balanceSheet));
   });
 }
 
